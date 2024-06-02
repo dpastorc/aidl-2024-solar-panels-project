@@ -83,6 +83,7 @@ def main() -> int:
     ap.add_argument("-i", "--input", required=True, help="input folder")
     ap.add_argument("-o", "--output", required=True, help="output folder")
     ap.add_argument("-c", "--crop", required=True, help="number of squared tiles (should be 2**n where n is even)")
+    ap.add_argument("-p", "--preview", required=False, action='store_true', default=False, help="show a preview of the generated tiles")
     args = vars(ap.parse_args())
 
     num_tiles = int(args['crop'])
@@ -94,7 +95,7 @@ def main() -> int:
 
     croped_files = crop(os.path.realpath(args['input']), os.path.realpath(args['output']), num_tiles)
     
-    if len(croped_files) > 0:
+    if args['preview'] and len(croped_files) > 0:
         num_rows = int(math.sqrt(num_tiles))
         num_cols = int(math.sqrt(num_tiles))
         for crop_file in croped_files:
