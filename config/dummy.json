@@ -1,0 +1,6 @@
+{
+    "bounding_box": [423183, 4590724, 423909, 4591368],
+    "years": [2022, 2023],
+    "region": "Urban area in Vilassar de Mar",
+    "model": "UNet"
+}
