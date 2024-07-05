@@ -34,18 +34,7 @@ from IPython.display import display, Image as IPImage
 
 root_dir = '/content/'                                                          # Root directory in Colab
 
-# ICGC download and conversion parameters
-patch_size = 160                                                                # squared patch size in pixels - allowed values up to 4096 max (4096x4096px, 1km2 area with 0,25m/pixel resolution)
-resolution = 0.25                                                               # raw meters per pixel - allowed values: 0.1, 0.15, 0.25, 0.50, 2.5 or 10 depending on availability
-image_format = "TIF"                                                            # allowed values: "JPEG" or "TIF"
-rawimage_dir = os.path.join(root_dir, 'raw/images/')                                         # path to save downloaded patches (patch_size)
-image_size = 256                                                                # Target resized squared patch size in pixels
-file_format = "PNG"                                                             # Target converted patch format
-image_dir = os.path.join(root_dir, 'dataset/image/')                                         # Path to save resized and converted images (image_size)
-merge_dir = os.path.join(root_dir, 'dataset/merge/')                                         # Path to save merged image from resized and converted images
-
 # Model parameters
-model_dir = os.path.join(root_dir, 'pretrained/')                                                # Path to save pretrained model dictionary
 dict_location = 'https://temp-posgraduation.s3.amazonaws.com/'                  # Base public URL where pretrained model dictionaries have been placed for download
 # Segformer model parameters
 seg_pretrained_model_name = "nvidia/segformer-b0-finetuned-ade-512-512"         # Pretrained Segformer
@@ -57,11 +46,7 @@ num_labels = len(id2label)                                                      
 unet_pretrained_model_dict = 'unet_solar_panel_detector.pth'                    # Dictionary of the selected fine-tuned Segformer model for solar panel detection
 
 # Inference parameters
-batch_size = 1 #8                                                                  # 8 on T4 GPU
-pred_image_dir = os.path.join(root_dir, 'gen/predimgs/')                                     # Path to save predicted masks
-pred_merge_dir = os.path.join(root_dir, 'gen/predmerge/')                                    # Path to save merged mask
-grid_image_dir = os.path.join(root_dir, 'gen/gridimgs/')                                     # Path to save a grid of sample images and masks
-overlay_image_dir = os.path.join(root_dir, 'gen/overlay/')                                   # Path to save overlay image from merged image and mask
+batch_size = 8                                                                  # 8 on T4 GPU
 merged_filename = "merged_image"                                                # Base filename for merged images
 merged_fileformat = "JPEG"                                                      # File format for merged images
 overlay_rgb_color=(255, 0, 255)
@@ -69,18 +54,11 @@ overlay_rgb_color=(255, 0, 255)
 # Parameters for power calculation
 #spatial_resolution = 0.15625                                                    # spatial resolution of the predicted mask in meters by pixel, calculated from patch_size, resolution and image_size
 avg_W = 210                                                                     # Average power per square meter (https://autosolar.es)
-plot_dir = os.path.join(root_dir, 'gen/plot/')                                               # Directory to save PV Area and Installed power plot
 
 # Animation GIFs parameters
-animated_merge_dir = os.path.join(root_dir, 'gen/animation/')                                # Directory to save animated merged images
 transition_time = 1000                                                          # Transition time in mseconds for the animated GIF
 target_size = (1024, 768)                                                       # Animated GIF dimensions
 crop_params = None                                                              # Crop area for the target animated gif in percentages (xmin, ymin, xmax, ymax), i.e. (0.3, 0.55, 0.5, 0.7)
-gif_images = os.path.join(root_dir, 'gen/animation/animation_images.gif')                    # Path to the animaged gif from original images
-gif_masks = os.path.join(root_dir, 'gen/animation/animation_masks.gif')                      # Path to the animaged gif from predicted masks
-gif_overlays = os.path.join(root_dir, 'gen/animation/animation_overlays.gif')                # Path to the animaged gif from overlayed images and masks
-combined_gif_path = os.path.join(root_dir, 'gen/animation/combined_animation.gif')           # Output path for the combined GIF
-gif_paths_to_include = [gif_masks, gif_overlays]                                # GIFs to include, 2 or 3 from [gif_images, gif_masks, gif_overlays]
 
 # Zip parameters
 zip_filename = 'Solar_Panel_Generalization.zip'                                 # Name of the zip file to save the experiment outputs
@@ -159,7 +137,16 @@ def list_folders_and_files_in_zip(zip_file):
 
 # Function to fetch, convert, merge and save images from ICGC for a given year
 
-def fetch_and_save_images(year, bounding_box, image_base_dir, image_target_dir, merged_target_dir, image_format, patch_size, image_size, resolution, merged_filename="merged_image", merged_fileformat="JPEG"):
+def fetch_and_save_images(year, bounding_box, icgc_params, merged_filename="merged_image", merged_fileformat="JPEG"):
+    image_base_dir = icgc_params['rawimage_dir']
+    image_target_dir = icgc_params['image_dir']
+    merged_target_dir = icgc_params['merge_dir']
+    input_file_extension = icgc_params['input_file_extension']
+    output_file_extension = icgc_params['output_file_extension']
+    patch_size = icgc_params['patch_size']
+    image_size = icgc_params['image_size']
+    resolution = icgc_params['resolution']
+
     images_dir = os.path.join(image_base_dir, str(year))
     os.makedirs(images_dir, exist_ok=True)
     images_target_dir = os.path.join(image_target_dir, str(year))
@@ -207,7 +194,7 @@ def fetch_and_save_images(year, bounding_box, image_base_dir, image_target_dir, 
                 url = (f"https://geoserveis.icgc.cat/servei/catalunya/orto-territorial/wms?"
                        f"REQUEST=GetMap&VERSION=1.3.0&SERVICE=WMS&CRS=EPSG:25831&BBOX={bbox}&"
                        f"WIDTH={patch_width_pixels}&HEIGHT={patch_height_pixels}&LAYERS=ortofoto_{resolution_str}_color_{year}&"
-                       f"STYLES=&FORMAT={format_mime_map[image_format]}&BGCOLOR=0xFFFFFF&TRANSPARENT=TRUE&EXCEPTION=INIMAGE")
+                       f"STYLES=&FORMAT={format_mime_map[input_file_extension]}&BGCOLOR=0xFFFFFF&TRANSPARENT=TRUE&EXCEPTION=INIMAGE")
 
                 response = requests.get(url)
                 if response.status_code == 200:
@@ -217,8 +204,8 @@ def fetch_and_save_images(year, bounding_box, image_base_dir, image_target_dir, 
                     pad_y = patch_size - patch_height_pixels if patch_height_pixels < patch_size else 0
                     if pad_x > 0 or pad_y > 0:
                         image = ImageOps.expand(image, (0, pad_y, pad_x, 0), fill='black')
-                    image_path = os.path.join(images_dir, f"patch_{i}_{j}.{image_format.lower()}")
-                    image.save(image_path, format=image_format if image_format != "TIF" else "TIFF")
+                    image_path = os.path.join(images_dir, f"patch_{i}_{j}.{input_file_extension.lower()}")
+                    image.save(image_path, format=input_file_extension if input_file_extension != "TIF" else "TIFF")
                 else:
                     print(f"Failed to retrieve image for bbox {bbox}")
 
@@ -260,7 +247,7 @@ def fetch_and_save_images(year, bounding_box, image_base_dir, image_target_dir, 
                         img_resized = img.resize((image_size, image_size), Image.LANCZOS)
 
                         # Save the image in target format to the output directory
-                        img_resized.save(output_file_path, file_format)
+                        img_resized.save(output_file_path, output_file_extension)
 
                 pbar.update(1)
 
@@ -272,7 +259,7 @@ def fetch_and_save_images(year, bounding_box, image_base_dir, image_target_dir, 
 
     for j in range(num_patches_y):
         for i in range(num_patches_x):
-            image_path = os.path.join(images_target_dir, f"patch_{i}_{num_patches_y - 1 - j}.{file_format.lower()}")
+            image_path = os.path.join(images_target_dir, f"patch_{i}_{num_patches_y - 1 - j}.{output_file_extension.lower()}")
             if os.path.exists(image_path):
                 image = Image.open(image_path)
                 image = image.convert('RGB')  # Ensure image is in RGB format
@@ -813,7 +800,7 @@ class SolarPanelGenDataset(Dataset):
 
 """**Generalization function for a single year**"""
 
-def gen_model(device, model_sel, model, image_dir, image_size=256, pred_image_dir='predicted_masks', grid_image_dir='grid_images', year=None):
+def gen_model(device, model_sel, model, image_dir, image_extension, image_size=256, pred_image_dir='predicted_masks', grid_image_dir='grid_images', year=None):
     if year is not None:
         pred_image_dir = os.path.join(pred_image_dir, str(year))
         grid_image_dir = os.path.join(grid_image_dir, str(year))
@@ -859,7 +846,7 @@ def gen_model(device, model_sel, model, image_dir, image_size=256, pred_image_di
                 # Save predicted masks
                 pred_mask = predicted[i].cpu().numpy()
                 img_name = img_names[i]
-                pred_mask_path = os.path.join(pred_image_dir, img_name.replace(file_format, 'png'))
+                pred_mask_path = os.path.join(pred_image_dir, img_name.replace(image_extension, 'png'))
                 plt.imsave(pred_mask_path, pred_mask, cmap='gray')
 
                 # Prepare for grid saving
@@ -901,39 +888,45 @@ def main() -> int:
     model_sel = settings['model']
 
     # ICGC download and conversion parameters
-    rawimage_dir = os.path.join(root_dir, 'raw/images/')                                         # path to save downloaded patches (patch_size)
-    image_dir = os.path.join(root_dir, 'dataset/image/')                                         # Path to save resized and converted images (image_size)
-    merge_dir = os.path.join(root_dir, 'dataset/merge/')                                         # Path to save merged image from resized and converted images
+    igcc_params = {
+        'patch_size': 160,                                      # squared patch size in pixels - allowed values up to 4096 max (4096x4096px, 1km2 area with 0,25m/pixel resolution)
+        'resolution': 0.25,                                     # raw meters per pixel - allowed values: 0.1, 0.15, 0.25, 0.50, 2.5 or 10 depending on availability
+        'input_file_extension': "TIF",                          # allowed values: "JPEG" or "TIF"
+        'rawimage_dir': os.path.join(root_dir, 'raw/images/'),  # path to save downloaded patches (patch_size)
+        'image_size': 256,                                      # Target resized squared patch size in pixels
+        'output_file_extension': "PNG",                         # Target converted patch format
+        'image_dir': os.path.join(root_dir, 'dataset/image/'),  # Path to save resized and converted images (image_size)
+        'merge_dir': os.path.join(root_dir, 'dataset/merge/')   # Path to save merged image from resized and converted images
+    }
 
     # Model parameters
-    model_dir = os.path.join(root_dir, 'pretrained/')                                                # Path to save pretrained model dictionary
+    model_dir = os.path.join(root_dir, 'pretrained/')           # Path to save pretrained model dictionary
 
     # Inference parameters
-    pred_image_dir = os.path.join(root_dir, 'gen/predimgs/')                                     # Path to save predicted masks
-    pred_merge_dir = os.path.join(root_dir, 'gen/predmerge/')                                    # Path to save merged mask
-    grid_image_dir = os.path.join(root_dir, 'gen/gridimgs/')                                     # Path to save a grid of sample images and masks
-    overlay_image_dir = os.path.join(root_dir, 'gen/overlay/')                                   # Path to save overlay image from merged image and mask
+    pred_image_dir = os.path.join(root_dir, 'gen/predimgs/')    # Path to save predicted masks
+    pred_merge_dir = os.path.join(root_dir, 'gen/predmerge/')   # Path to save merged mask
+    grid_image_dir = os.path.join(root_dir, 'gen/gridimgs/')    # Path to save a grid of sample images and masks
+    overlay_image_dir = os.path.join(root_dir, 'gen/overlay/')  # Path to save overlay image from merged image and mask
 
     # Parameters for power calculation
-    plot_dir = os.path.join(root_dir, 'gen/plot/')                                               # Directory to save PV Area and Installed power plot
+    plot_dir = os.path.join(root_dir, 'gen/plot/')               # Directory to save PV Area and Installed power plot
 
     # Animation GIFs parameters
-    animated_merge_dir = os.path.join(root_dir, 'gen/animation/')                                # Directory to save animated merged images
-    gif_images = os.path.join(root_dir, 'gen/animation/animation_images.gif')                    # Path to the animaged gif from original images
-    gif_masks = os.path.join(root_dir, 'gen/animation/animation_masks.gif')                      # Path to the animaged gif from predicted masks
-    gif_overlays = os.path.join(root_dir, 'gen/animation/animation_overlays.gif')                # Path to the animaged gif from overlayed images and masks
-    combined_gif_path = os.path.join(root_dir, 'gen/animation/combined_animation.gif')           # Output path for the combined GIF
+    animated_merge_dir = os.path.join(root_dir, 'gen/animation/')                      # Directory to save animated merged images
+    gif_images = os.path.join(root_dir, 'gen/animation/animation_images.gif')          # Path to the animaged gif from original images
+    gif_masks = os.path.join(root_dir, 'gen/animation/animation_masks.gif')            # Path to the animaged gif from predicted masks
+    gif_overlays = os.path.join(root_dir, 'gen/animation/animation_overlays.gif')      # Path to the animaged gif from overlayed images and masks
+    combined_gif_path = os.path.join(root_dir, 'gen/animation/combined_animation.gif') # Output path for the combined GIF
     gif_paths_to_include = [gif_masks, gif_overlays]                                # GIFs to include, 2 or 3 from [gif_images, gif_masks, gif_overlays]
 
     """# Execution
     **Download and preprocess dataset from ICGC**
     """
-
     if args['no_icgc_download'] == False:
         # Fetch and merge images for each year
         start_time = time.perf_counter()
         for year in years:
-            fetch_and_save_images(year, bounding_box, rawimage_dir, image_dir, merge_dir, image_format, patch_size, image_size, resolution, merged_filename=merged_filename, merged_fileformat=merged_fileformat)
+            fetch_and_save_images(year, bounding_box, igcc_params, merged_filename=merged_filename, merged_fileformat=merged_fileformat)
         elapsed_time = time.perf_counter() - start_time
         print(f"Download and coversion took: {format_time(elapsed_time)}\n")
 
@@ -949,8 +942,8 @@ def main() -> int:
                 "and/or you do not have an MPS-enabled device on this machine.")
 
     # Load selected model
+    print(f"Loading {model_sel}...")
     if model_sel == "Segformer":
-        print("Loading Segformer...")
         # Load the pretrained Segformer model
         model = SegformerForSemanticSegmentation.from_pretrained(
             seg_pretrained_model_name,
@@ -961,14 +954,14 @@ def main() -> int:
         )
         # Download and load the state dictionary from a pretrained model
         #download_dict(dict_location, model_dir, seg_pretrained_model_dict)
-        seg_pretrained_model_path = os.path.join(model_dir, "pretrained", seg_pretrained_model_dict)
+        seg_pretrained_model_path = os.path.join(model_dir, seg_pretrained_model_dict)
         try:
             model.load_state_dict(torch.load(seg_pretrained_model_path, map_location=device))
-            print(f"Successfully loaded the model from {seg_pretrained_model_path}")
+            print(f"Successfully loaded the {model_sel} model values from {seg_pretrained_model_path}")
         except Exception as e:
             print(f"Error loading the model from {seg_pretrained_model_path}: {e}")
+            return 3
     elif model_sel == "UNet":
-        print("Loading UNet...")
         # Load the pretrained UNet model
         model = UNet(in_channels=3, out_channels=1)
         if args['no_pretrain_download'] == False:
@@ -977,11 +970,13 @@ def main() -> int:
         unet_pretrained_model_path = os.path.join(model_dir, unet_pretrained_model_dict)
         try:
             model.load_state_dict(torch.load(unet_pretrained_model_path, map_location=device))
-            print(f"Successfully loaded the dictionary from {unet_pretrained_model_path}")
+            print(f"Successfully loaded the {model_sel} model values from {unet_pretrained_model_path}")
         except Exception as e:
             print(f"Error loading the dictionary from {unet_pretrained_model_path}: {e}")
+            return 3
     else:
         print("Error: Invalid model selection")
+        return 2
 
     # Move model to GPU if available
     model.to(device)
@@ -1003,16 +998,36 @@ def main() -> int:
         start_time = time.perf_counter()
 
         # Call gen_model
-        gen_model(device, model_sel, model, image_dir, image_size=image_size, pred_image_dir=pred_image_dir, grid_image_dir=grid_image_dir, year=year)
+        gen_model(device, 
+                  model_sel, 
+                  model, 
+                  igcc_params['image_dir'], 
+                  image_extension=igcc_params['output_file_extension'],
+                  image_size=igcc_params['image_size'], 
+                  pred_image_dir=pred_image_dir, 
+                  grid_image_dir=grid_image_dir, year=year)
 
         # Call merge_predicted_masks
-        merge_predicted_masks(pred_image_dir, pred_merge_dir, year, patch_size=image_size, image_format='png', merged_filename=merged_filename, merged_fileformat=merged_fileformat)
+        merge_predicted_masks(pred_image_dir, 
+                              pred_merge_dir, 
+                              year, 
+                              patch_size=igcc_params['image_size'], 
+                              image_format='png', 
+                              merged_filename=merged_filename, 
+                              merged_fileformat=merged_fileformat)
 
         # Call create_overlay
-        create_overlay(merge_dir, pred_merge_dir, overlay_image_dir, year, merged_filename, merged_fileformat, color=overlay_rgb_color)
+        create_overlay(igcc_params['merge_dir'], pred_merge_dir, overlay_image_dir, year, merged_filename, merged_fileformat, color=overlay_rgb_color)
 
         # Call calculate_area_and_power
-        PV_Area, installed_power = calculate_area_and_power(pred_merge_dir, year, merged_filename, merged_fileformat, patch_size, resolution, image_size, avg_W)
+        PV_Area, installed_power = calculate_area_and_power(pred_merge_dir, 
+                                                            year, 
+                                                            merged_filename, 
+                                                            merged_fileformat, 
+                                                            igcc_params['patch_size'], 
+                                                            igcc_params['resolution'], 
+                                                            igcc_params['image_size'], 
+                                                            avg_W)
 
         # Store PV Area and Installed Power
         PV_Areas.append(PV_Area)
@@ -1031,15 +1046,13 @@ def main() -> int:
     """**Generate plots and animated images**"""
 
     # Generate plots and animations
-
-    # Plot PV Area and Installed Powers over the years
-    plot_pv_area_and_installed_power(years, PV_Areas, installed_powers, plot_dir)
-
-    # Create animated GIFs
-    create_animated_gif(merge_dir, years, 'images', animated_merge_dir, region, target_size, transition_time, crop_params=crop_params)
+    create_animated_gif(igcc_params['merge_dir'], years, 'images', animated_merge_dir, region, target_size, transition_time, crop_params=crop_params)
     create_animated_gif(pred_merge_dir, years, 'masks', animated_merge_dir, region, target_size, transition_time, crop_params=crop_params)
     create_animated_gif(overlay_image_dir, years, 'overlays', animated_merge_dir, region, target_size, transition_time, crop_params=crop_params)
     combine_gifs(gif_paths_to_include, combined_gif_path)
+
+    # Plot PV Area and Installed Powers over the years
+    plot_pv_area_and_installed_power(years, PV_Areas, installed_powers, plot_dir)
 
     """**Zip results**"""
     
