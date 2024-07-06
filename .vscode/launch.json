@@ -1,0 +1,104 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python Debugger: dataset preprocess",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/tools/prepare_dataset.py",
+            "console": "integratedTerminal",
+            "args": "-r ${workspaceFolder}/dataset/raw/ --skip-pv01-extract --sskip-pv03-extract --skip-google-extract"
+        },
+        {
+            "name": "Python Debugger: gen segformer sant cugat (no download)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/generalization.py",
+            "console": "integratedTerminal",
+            "args": "-r ${workspaceFolder} -c ${workspaceFolder}/config/generalization_segformer_sant_cugat.json --no-icgc-download --no-pretrain-download"
+        },
+        {
+            "name": "Python Debugger: gen segformer dummy (no download)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/generalization.py",
+            "console": "integratedTerminal",
+            "args": "-r ${workspaceFolder} -c ${workspaceFolder}/config/generalization_segformer_dummy.json --no-icgc-download --no-pretrain-download"
+        },
+        {
+            "name": "Python Debugger: gen segformer dummy",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/generalization.py",
+            "console": "integratedTerminal",
+            "args": "-r ${workspaceFolder} -c ${workspaceFolder}/config/generalization_segformer_dummy.json --no-pretrain-download"
+        },
+        {
+            "name": "Python Debugger: gen unet dummy (no download)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/generalization.py",
+            "console": "integratedTerminal",
+            "args": "-r ${workspaceFolder} -c ${workspaceFolder}/config/generalization_unet_dummy.json --no-icgc-download --no-pretrain-download"
+        },
+        {
+            "name": "Python Debugger: gen unet dummy",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/generalization.py",
+            "console": "integratedTerminal",
+            "args": "-r ${workspaceFolder} -c ${workspaceFolder}/config/generalization_unet_dummy.json --no-pretrain-download"
+        },
+        {
+            "name": "Python Debugger: generalization",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/generalization.py",
+            "console": "integratedTerminal",
+            "args": "-r ${workspaceFolder} -c ${workspaceFolder}/config/generalization_segformer_dummy.json"
+        },
+        {
+            "name": "Python Debugger: colab",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/results/experiments/segformer_b0_solar_panel_e15.py",
+            "console": "integratedTerminal",
+            "args": ""
+        },
+        {
+            "name": "Python Debugger: normalize control image",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/tools/normalize.py",
+            "console": "integratedTerminal",
+            "args": "-i ${workspaceFolder}/images_google"
+        },
+        {
+            "name": "Python Debugger: normalize with Arguments",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/tools/normalize.py",
+            "console": "integratedTerminal",
+            "args": "-i ~/Downloads/PV-ALL/image/"
+        },
+        {
+            "name": "Python Debugger: normalize2 with Arguments",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/tools/normalize.py",
+            "console": "integratedTerminal",
+            "args": "-i /Users/davidpastor/workspace/UPC/DeepLearning/aidl-2024-solar-panels-project/datasets/train/"
+        },
+        {
+            "name": "Python Debugger: crop with Arguments",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/tools/crop.py",
+            "console": "integratedTerminal",
+            "args": "-i ${workspaceFolder}/datasets/dummy -o ${workspaceFolder}/datasets/croped/ --crop 16"
+        }
+    ]
+}

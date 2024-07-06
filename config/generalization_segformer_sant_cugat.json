@@ -1,0 +1,6 @@
+{
+    "bounding_box": [421492, 4590601, 421784, 4590863],
+    "years": [2022, 2023],
+    "region": "Urban area in Sant Cugat",
+    "model": "Segformer"
+}
