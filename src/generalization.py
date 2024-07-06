@@ -29,6 +29,9 @@ from tqdm import tqdm
 from matplotlib.ticker import MaxNLocator
 from IPython.display import display, Image as IPImage
 
+from packages import time_fmt
+from models import unet
+
 """# Parameters"""
 
 root_dir = '/content/'                                                          # Root directory in Colab
@@ -63,19 +66,7 @@ crop_params = None                                                              
 zip_filename = 'Solar_Panel_Generalization.zip'                                 # Name of the zip file to save the experiment outputs
 exclude_folders = ['sample_data', 'raw', 'dataset', 'gen/predimgs', '.config', zip_filename]  # Paths to exclude in zip file
 
-
-"""# Supporting Functions
-**Function to calculate execution times**
-"""
-
-# Function to calculate execution times
-
-def format_time(elapsed_time) -> str:
-    days = 0
-    if elapsed_time >= 86400:
-        days = int(elapsed_time / 86400)
-    elapsed_str = time.strftime("%H:%M:%S", time.gmtime(elapsed_time))
-    return str(days) + ":" + elapsed_str
+"""# Supporting Functions"""
 
 """**Functions to manage files and folders**"""
 
@@ -88,47 +79,6 @@ def list_files_by_subfolder(base_dir):
         if os.path.isdir(year_folder_path):
             file_count = len(os.listdir(year_folder_path))
             print(f"  Year {year_folder}: {file_count} files")
-
-# Function to zip folders considering exclusion list
-
-def zip_dir(dir_to_zip, output_zip, exclude=[]):
-    exclude = [os.path.abspath(os.path.join(dir_to_zip, ex_folder)) for ex_folder in exclude]
-    with zipfile.ZipFile(output_zip, 'w', zipfile.ZIP_DEFLATED) as zipf:
-        # Iterate over all files and folders in the directory
-        for root, _, files in os.walk(dir_to_zip):
-            abs_root = os.path.abspath(root)
-            # Check if the current root is in the exclude list
-            if any(abs_root.startswith(ex_folder) for ex_folder in exclude):
-                continue  # Skip this folder and its contents if in exclude list
-
-            for file in files:
-                if file == os.path.basename(output_zip):
-                    continue  # Skip the output zip file itself
-                abs_file = os.path.join(root, file)
-                zipf.write(abs_file, os.path.relpath(abs_file, dir_to_zip))
-
-
-# Function to list folders within a zip file
-
-def list_folders_and_files_in_zip(zip_file):
-    with zipfile.ZipFile(zip_file, 'r') as zipf:
-        file_set = set()
-
-        # Iterate over each entry in the zip file
-        for entry in zipf.infolist():
-            entry_name = entry.filename
-
-            # Determine if entry is a directory or file
-            if entry_name.endswith('/'):
-                # Entry is a directory
-                folder_name = entry_name.rstrip('/')
-            else:
-                # Entry is a file
-                file_set.add(entry_name)
-
-        print("Files in the zip file:")
-        for file in file_set:
-            print(file)
 
 """**Function to retrieve and generate a dataset from ICGC for a given year**
 
@@ -701,63 +651,7 @@ def plot_pv_area_and_installed_power(years, PV_Areas, installed_powers, plot_dir
     # Display the combined plot
     plt.show()
 
-"""# Model, dataset class and generalization functions
-
-**UNet model**
-"""
-
-#Unet - Full 1024
-class UNet(nn.Module):
-    def __init__(self, in_channels=3, out_channels=1):
-        super(UNet, self).__init__()
-        self.enc1 = self.conv_block(in_channels, 64)
-        self.enc2 = self.conv_block(64, 128)
-        self.enc3 = self.conv_block(128, 256)
-        self.enc4 = self.conv_block(256, 512)
-        self.bottleneck = self.conv_block(512, 1024)
-        self.upconv4 = self.upconv(1024, 512)
-        self.dec4 = self.conv_block(1024, 512)
-        self.upconv3 = self.upconv(512, 256)
-        self.dec3 = self.conv_block(512, 256)
-        self.upconv2 = self.upconv(256, 128)
-        self.dec2 = self.conv_block(256, 128)
-        self.upconv1 = self.upconv(128, 64)
-        self.dec1 = self.conv_block(128, 64)
-        self.conv_out = nn.Conv2d(64, out_channels, kernel_size=1)
-
-    def conv_block(self, in_channels, out_channels):
-        return nn.Sequential(
-            nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
-            nn.BatchNorm2d(out_channels),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(out_channels, out_channels, kernel_size=3, padding=1),
-            nn.BatchNorm2d(out_channels),
-            nn.ReLU(inplace=True)
-        )
-
-    def upconv(self, in_channels, out_channels):
-        return nn.ConvTranspose2d(in_channels, out_channels, kernel_size=2, stride=2)
-
-    def forward(self, x):
-        enc1 = self.enc1(x)
-        enc2 = self.enc2(F.max_pool2d(enc1, 2))
-        enc3 = self.enc3(F.max_pool2d(enc2, 2))
-        enc4 = self.enc4(F.max_pool2d(enc3, 2))
-        bottleneck = self.bottleneck(F.max_pool2d(enc4, 2))
-        dec4 = self.upconv4(bottleneck)
-        dec4 = torch.cat((dec4, enc4), dim=1)
-        dec4 = self.dec4(dec4)
-        dec3 = self.upconv3(dec4)
-        dec3 = torch.cat((dec3, enc3), dim=1)
-        dec3 = self.dec3(dec3)
-        dec2 = self.upconv2(dec3)
-        dec2 = torch.cat((dec2, enc2), dim=1)
-        dec2 = self.dec2(dec2)
-        dec1 = self.upconv1(dec2)
-        dec1 = torch.cat((dec1, enc1), dim=1)
-        dec1 = self.dec1(dec1)
-        out = self.conv_out(dec1)
-        return out
+"""# Model, dataset class and generalization functions"""
 
 """**Model dictionary download function**"""
 
@@ -927,7 +821,7 @@ def main() -> int:
         for year in years:
             fetch_and_save_images(year, bounding_box, igcc_params, merged_filename=merged_filename, merged_fileformat=merged_fileformat)
         elapsed_time = time.perf_counter() - start_time
-        print(f"Download and coversion took: {format_time(elapsed_time)}\n")
+        print(f"Download and coversion took: {time_fmt.format_time(elapsed_time)}\n")
 
     """**Load the model**"""
 
@@ -962,7 +856,7 @@ def main() -> int:
             return 3
     elif model_sel == "UNet":
         # Load the pretrained UNet model
-        model = UNet(in_channels=3, out_channels=1)
+        model = unet.UNet(in_channels=3, out_channels=1)
         if args['no_pretrain_download'] == False:
             # Download and load the state dictionary from a pretrained model
             download_dict(dict_location, model_dir, unet_pretrained_model_dict)
@@ -1037,10 +931,10 @@ def main() -> int:
         total_elapsed_time += elapsed_time
 
         # Print the time taken for current year
-        print(f"Generalization for year {year} took: {format_time(elapsed_time)}\n")
+        print(f"Generalization for year {year} took: {time_fmt.format_time(elapsed_time)}\n")
 
     # Print total elapsed time
-    print(f"Total time for all years: {format_time(total_elapsed_time)}")
+    print(f"Total time for all years: {time_fmt.format_time(total_elapsed_time)}")
 
     """**Generate plots and animated images**"""
 

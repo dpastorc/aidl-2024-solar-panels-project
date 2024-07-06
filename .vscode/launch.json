@@ -5,6 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python Debugger: dataset preprocess",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/tools/prepare_dataset.py",
+            "console": "integratedTerminal",
+            "args": "-r ${workspaceFolder}/dataset/raw/ --skip-pv01-extract --sskip-pv03-extract --skip-google-extract"
+        },
+        {
             "name": "Python Debugger: gen segformer sant cugat (no download)",
             "type": "debugpy",
             "request": "launch",
@@ -27,6 +35,22 @@
             "program": "${workspaceFolder}/src/generalization.py",
             "console": "integratedTerminal",
             "args": "-r ${workspaceFolder} -c ${workspaceFolder}/config/generalization_segformer_dummy.json --no-pretrain-download"
+        },
+        {
+            "name": "Python Debugger: gen unet dummy (no download)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/generalization.py",
+            "console": "integratedTerminal",
+            "args": "-r ${workspaceFolder} -c ${workspaceFolder}/config/generalization_unet_dummy.json --no-icgc-download --no-pretrain-download"
+        },
+        {
+            "name": "Python Debugger: gen unet dummy",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/generalization.py",
+            "console": "integratedTerminal",
+            "args": "-r ${workspaceFolder} -c ${workspaceFolder}/config/generalization_unet_dummy.json --no-pretrain-download"
         },
         {
             "name": "Python Debugger: generalization",
