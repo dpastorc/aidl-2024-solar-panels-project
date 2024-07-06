@@ -7,13 +7,12 @@ import json
 import matplotlib.pyplot as plt
 import numpy as np
 import random
-#import shutil
 import time
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
-import torchvision.transforms.functional as TF
+#import torch.optim as optim
+#import torchvision.transforms.functional as TF
 import zipfile
 import requests
 import imageio
