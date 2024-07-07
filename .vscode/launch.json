@@ -13,6 +13,22 @@
             "args": "-r ${workspaceFolder}/dataset/raw/ --skip-pv01-extract --sskip-pv03-extract --skip-google-extract"
         },
         {
+            "name": "Python Debugger: train segformer (no download)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/train.py",
+            "console": "integratedTerminal",
+            "args": "-r ${workspaceFolder} -c ${workspaceFolder}/config/train_segformer.json --no-dataset-download --no-pretrain-download"
+        },
+        {
+            "name": "Python Debugger: train segformer",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/train.py",
+            "console": "integratedTerminal",
+            "args": "-r ${workspaceFolder} -c ${workspaceFolder}/config/train_segformer.json --no-pretrain-download"
+        },
+        {
             "name": "Python Debugger: gen segformer sant cugat (no download)",
             "type": "debugpy",
             "request": "launch",
