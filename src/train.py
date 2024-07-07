@@ -10,7 +10,6 @@ import json
 import matplotlib.pyplot as plt
 import numpy as np
 import random
-#import shutil
 import time
 import torch
 import torch.nn as nn
@@ -27,42 +26,25 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 from transformers import SegformerForSemanticSegmentation
 from tqdm import tqdm
-from scipy.ndimage import gaussian_filter
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-from packages import time_fmt, zip
+from packages import time_fmt, plot, zip
 from models import unet
 
 # Quick configuration and Hyperparameters
 dataset_name = 'ZENODO-split'                                                   # Datasets available: PV01-split, PV-ALL-split, PV03-CROP-split, ZENODO-split
-model_sel = 'Segformer'                                                         # Segformer or UNet
 seg_pretrained_model_name = "nvidia/segformer-b0-finetuned-ade-512-512"         # Pretrained Segformer model range from b0 to b5. Ignore for UNet selection
 dict_sel = None                                                                 # Dictionary of the selected fine-tuned model from previous iterations; Use None to train from scratch.
-batch_size = 64                                                                 # 8 on T4 GPU, 64 on A100 GPU
 image_size = 256                                                                # Image size for training
-num_epochs = 50                                                                 # Train epochs
 val_interval = 5                                                                # Epochs interval to execute validation cycles
-lr = 0.0001                                                                     # Subject to fine-tuning (1e-4 found stable)
 
 # Learning Rate Hyperparameter Optimization
 early_stop = False                                                              # Early stopping: True or False
 early_stop_patience = 10                                                        # Number of epochs to wait after the last improvement before stopping the training
 
-# Data augmentation
-data_augmentation_flip = True                                                   # Data augmentation - random horizontal and/or vertical flip
-data_augmentation_rotation = True                                               # Data augmentation - random rotation in 90 degrees steps
-data_augmentation_brightness = True                                             # Data augmentation - random brigthness adjustment
-data_augmentation_contrast = True                                               # Data augmentation - random contrast adjustment
-data_augmentation_saturation = True                                             # Data augmentation - random saturation adjustment
-data_augmentation_hue = True                                                    # Data augmentation - random hue adjustment
-data_augmentation_blur = True                                                   # Data augmentation - blur
-data_augmentation_sharpen = True                                                # Data augmentation - sharpen
-data_augmentation_gaussian_noise = True                                         # Data augmentation - noise
-data_augmentation_random_padding = True                                         # Data augmentation - random black or white padding (replacing part of the image, between 10% and 50%)
-data_augmentation_random_polygons = True                                        # Data augmentation - random black or white polygons (square, rectangle between 5 and 20%, and L shapes between 5 and 15%)
-data_augmentation_contain_solar_panel = False                                   # Perform data augmentation on imgs that contain solar panels only (True on PV03, False on PV01 and ZENODO)
-
 """# Other parameters and paths"""
+
+overlay_rgb_color=(255, 0, 255)
 
 # Dataset parameters
 pv_file_format = 'bmp'                                                          # File format within the PVXX dataset
@@ -76,11 +58,6 @@ num_samples = 10                                                                
 # Model parameters
 dict_location = 'https://temp-posgraduation.s3.amazonaws.com/'                  # Base public URL where pretrained model dictionaries have been placed for download
 model_name = 'solar_panel_detector_train.pth'                                   # Name of the trained model dictionary to save
-
-# Segformer model parameters
-id2label = {0: 'background', 1: 'solar_panel'}                                  # dictionary of solar paner labels
-label2id = {label: id for id, label in id2label.items()}                        # dictionary to load the segformer
-num_labels = len(id2label)                                                      # parameter to load the segformer
 
 # Zip parameters
 zip_filename = 'Solar_Panel_Detector_Train.zip'                                  # Name of the zip file to save the experiment outputs
@@ -98,7 +75,6 @@ paths_to_remove = "/content/results /content/samples /content/plots"   # "/conte
 """**Functions to generate and save images**"""
 
 # Function to create an overlay of image and mask
-
 def overlay_image(image, mask, color, alpha, resize=None):
     im_copy = (image * 255).astype(np.uint8)
     im_copy = Image.fromarray(im_copy, "RGB")
@@ -114,7 +90,6 @@ def overlay_image(image, mask, color, alpha, resize=None):
     return np.array(im_copy)
 
 # Function to save samples
-
 def save_samples(images, masks, predictions, epoch, sample_type, output_dir="results", num_samples=8):
     os.makedirs(output_dir, exist_ok=True)
 
@@ -159,7 +134,7 @@ def save_samples(images, masks, predictions, epoch, sample_type, output_dir="res
 
             # Overlapped predicted mask and original
             if images[idx] is not None and images[idx].ndim == 3:
-                image_with_masks = overlay_image(img, pred, color=(0, 255, 0), alpha=0.3)
+                image_with_masks = overlay_image(img, pred, color=overlay_rgb_color, alpha=0.3)
                 axes[i, 3].imshow(image_with_masks)
                 axes[i, 3].set_title('Overlap')
             else:
@@ -173,7 +148,6 @@ def save_samples(images, masks, predictions, epoch, sample_type, output_dir="res
     plt.close()
 
 # Function to calculate epochs where samples will be saved
-
 def calculate_save_epochs(num_epochs, val_interval, num_samples):
 
     # Ensure num_epochs and val_interval are valid
@@ -199,94 +173,6 @@ def calculate_save_epochs(num_epochs, val_interval, num_samples):
         save_epochs = validation_epochs
 
     return save_epochs
-
-"""**Function to plot loss, validation and accuracy charts, and IoU and F1 Score charts**"""
-
-# Function to plot loss, validation and accuracy charts, and IoU and F1 Score charts
-
-def plot_charts(train_losses, train_accuracies, val_losses, val_accuracies, ious, f1s, val_interval):
-    epochs = len(train_losses)
-    val_epochs = range(val_interval, epochs + 1, val_interval)
-
-    plt.figure(figsize=(12, 12))
-
-    # Plot Training and Validation Loss
-    plt.subplot(2, 2, 1)
-    plt.plot(range(1, epochs + 1), train_losses, label='Train Loss')
-    plt.plot(val_epochs, val_losses, label='Val Loss')
-    plt.xlabel('Epochs')
-    plt.ylabel('Loss')
-    plt.title('Training and Validation Loss')
-    plt.legend()
-    plt.grid(True)
-
-    # Plot Training and Validation Accuracy
-    plt.subplot(2, 2, 2)
-    plt.plot(range(1, epochs + 1), train_accuracies, label='Train Accuracy')
-    plt.plot(val_epochs, val_accuracies, label='Val Accuracy')
-    plt.xlabel('Epochs')
-    plt.ylabel('Accuracy')
-    plt.title('Training and Validation Accuracy')
-    plt.legend()
-    plt.grid(True)
-
-    # Plot IoU and F1 Score
-    plt.subplot(2, 2, 3)
-    plt.plot(val_epochs, ious, label='IoU')
-    plt.plot(val_epochs, f1s, label='F1')
-    plt.xlabel('Epochs')
-    plt.ylabel('Score')
-    plt.title('Validation IoU and F1 Score')
-    plt.legend()
-    plt.grid(True)
-
-    plt.tight_layout()
-    plt.show()
-
-# Function to save plots
-def save_plots(train_losses, train_accuracies, val_losses, val_accuracies, ious, f1s, val_interval, epoch=None, output_dir="plots"):
-    os.makedirs(output_dir, exist_ok=True)
-    epochs = len(train_losses)
-    val_epochs = range(val_interval, epochs + 1, val_interval)
-
-    plt.figure(figsize=(12, 12))
-
-    # Plot Training and Validation Loss
-    plt.subplot(2, 2, 1)
-    plt.plot(range(1, epochs + 1), train_losses, label='Train Loss')
-    plt.plot(val_epochs, val_losses, label='Val Loss')
-    plt.xlabel('Epochs')
-    plt.ylabel('Loss')
-    plt.title('Training and Validation Loss')
-    plt.legend()
-    plt.grid(True)
-
-    # Plot Training and Validation Accuracy
-    plt.subplot(2, 2, 2)
-    plt.plot(range(1, epochs + 1), train_accuracies, label='Train Accuracy')
-    plt.plot(val_epochs, val_accuracies, label='Val Accuracy')
-    plt.xlabel('Epochs')
-    plt.ylabel('Accuracy')
-    plt.title('Training and Validation Accuracy')
-    plt.legend()
-    plt.grid(True)
-
-    # Plot IoU and F1 Score
-    plt.subplot(2, 2, 3)
-    plt.plot(val_epochs, ious, label='IoU')
-    plt.plot(val_epochs, f1s, label='F1')
-    plt.xlabel('Epochs')
-    plt.ylabel('Score')
-    plt.title('Validation IoU and F1 Score')
-    plt.legend()
-    plt.grid(True)
-
-    plt.tight_layout()
-    if epoch is not None:
-        plt.savefig(os.path.join(output_dir, f'loss_and_scores_epoch_{epoch + 1}.png'))
-    else:
-        plt.savefig(os.path.join(output_dir, 'loss_and_scores_final.png'))
-    plt.close()
 
 """# Dataset download function"""
 
@@ -338,13 +224,13 @@ def download_dict(base_url, model_dir, filename):
 
 # Function to apply data augmentation
 
-def apply_data_augmentation(image, mask):
+def apply_data_augmentation(config, image, mask):
 
     # Convert PyTorch Tensor to PIL Image
     image = TF.to_pil_image(image)
     mask = TF.to_pil_image(mask)
 
-    if data_augmentation_flip:
+    if config['flip']:
         # Random horizontal flip
         if random.random() > 0.5:
             image = TF.hflip(image)
@@ -354,55 +240,55 @@ def apply_data_augmentation(image, mask):
             image = TF.vflip(image)
             mask = TF.vflip(mask)
 
-    if data_augmentation_rotation:
+    if config['rotation']:
         # Random rotation
         angle = random.choice([0, 90, 180, 270])
         image = TF.rotate(image, angle)
         mask = TF.rotate(mask, angle)
 
-    if data_augmentation_brightness:
+    if config['brightness']:
         # Random brightness adjustment
         if random.random() > 0.5:
             factor = random.uniform(0.8, 1.2)
             image = TF.adjust_brightness(image, factor)
 
-    if data_augmentation_contrast:
+    if config['contrast']:
         # Random contrast adjustment
         if random.random() > 0.5:
             factor = random.uniform(0.8, 1.2)
             image = TF.adjust_contrast(image, factor)
 
-    if data_augmentation_saturation:
+    if config['saturation']:
         # Random saturation adjustment
         if random.random() > 0.5:
             factor = random.uniform(0.8, 1.2)
             image = TF.adjust_saturation(image, factor)
 
-    if data_augmentation_hue:
+    if config['hue']:
         # Random hue adjustment
         if random.random() > 0.5:
             factor = random.uniform(-0.1, 0.1)  # Hue factor is between -0.5 and 0.5
             image = TF.adjust_hue(image, factor)
 
-    if data_augmentation_blur:
+    if config['blur']:
         # Random blur
         if random.random() > 0.5:
             image = image.filter(ImageFilter.GaussianBlur(radius=random.uniform(0, 2)))
 
-    if data_augmentation_sharpen:
+    if config['sharpen']:
         # Random sharpening
         if random.random() > 0.5:
             enhancer = ImageEnhance.Sharpness(image)
             image = enhancer.enhance(random.uniform(1.0, 2.0))
 
-    if data_augmentation_gaussian_noise:
+    if config['gaussian_noise']:
         # Add Gaussian noise
         image = np.array(image) / 255.0
         noise = np.random.normal(0, 0.1, image.shape)
         image = np.clip(image + noise, 0, 1)
         image = Image.fromarray((image * 255).astype(np.uint8))
 
-    if data_augmentation_random_padding:
+    if config['random_padding']:
         # Randomly replace part of the image with white or black padding
         if random.random() > 0.5:
             padding_color = random.choice([0, 255])  # Black or white padding
@@ -416,7 +302,7 @@ def apply_data_augmentation(image, mask):
             draw.rectangle([x0, y0, x0 + pad_width, y0 + pad_height], fill=padding_color)
             draw_mask.rectangle([x0, y0, x0 + pad_width, y0 + pad_height], fill=0)
 
-    if data_augmentation_random_polygons:
+    if config['random_polygons']:
         # Include small white or black polygons randomly within the image
         if random.random() > 0.5:
             polygon_color = random.choice([0, 255])  # Black or white polygons
@@ -459,12 +345,13 @@ def apply_data_augmentation(image, mask):
 
 # Define the custom dataset
 class SolarPanelTrainDataset(Dataset):
-    def __init__(self, image_dir, mask_dir, file_format='bmp', transforms=None):
+    def __init__(self, image_dir, mask_dir, file_format='bmp', transforms=None, augmentation_cfg=None):
         self.image_dir = image_dir
         self.mask_dir = mask_dir
         self.file_format = file_format  # Specify the file format for both images and masks
         self.transforms = transforms
         self.images = os.listdir(image_dir)
+        self.augmentation_cfg = augmentation_cfg
 
     def __len__(self):
         return len(self.images)
@@ -485,10 +372,11 @@ class SolarPanelTrainDataset(Dataset):
             image = self.transforms(image)
             mask = self.transforms(mask)
 
-            # Apply augmentation to images with solar panels only or all
-            apply_augmentation = (not data_augmentation_contain_solar_panel or torch.any(mask > 0)) # Check if the mask contains any pixel value other than 0
-            if apply_augmentation:
-                image, mask = apply_data_augmentation(image, mask)
+            if self.augmentation_cfg != None:
+                # Apply augmentation to images with solar panels only or all
+                apply_augmentation = (not self.augmentation_cfg['contain_solar_panel'] or torch.any(mask > 0)) # Check if the mask contains any pixel value other than 0
+                if apply_augmentation:
+                    image, mask = apply_data_augmentation(self.augmentation_cfg, image, mask)
 
         mask = torch.tensor(np.array(mask, dtype=np.uint8), dtype=torch.long)
 
@@ -499,7 +387,24 @@ class SolarPanelTrainDataset(Dataset):
 
 """**Train function**"""
 
-def train_model(device, model_sel, model, lr, early_stop, train_image_dir, train_mask_dir, val_image_dir, val_mask_dir, output_dir, results_path, dataset_name, num_epochs, val_interval, num_samples, image_size, early_stop_patience):
+def train_model(device, 
+                settings, 
+                model, 
+                early_stop, 
+                train_image_dir, train_mask_dir, 
+                val_image_dir, val_mask_dir, 
+                output_dir,
+                results_path, 
+                dataset_name,  
+                val_interval, 
+                num_samples, 
+                image_size, 
+                early_stop_patience):
+
+    model_sel = settings['model'].lower()
+    batch_size = settings['batch_size']
+    num_epochs = settings['epochs']
+    lr = settings['lr']
 
     # Transformations for the dataset
     transform_images = transforms.Compose([
@@ -514,13 +419,21 @@ def train_model(device, model_sel, model, lr, early_stop, train_image_dir, train
         file_format = google_file_format
 
     # Create datasets
-    train_dataset = SolarPanelTrainDataset(image_dir=train_image_dir, mask_dir=train_mask_dir, file_format=file_format, transforms=transform_images)
+    train_dataset = SolarPanelTrainDataset(image_dir=train_image_dir,
+                                           mask_dir=train_mask_dir,
+                                           file_format=file_format,
+                                           transforms=transform_images,
+                                           augmentation_cfg=settings['augmentation'])
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False, drop_last=True)
-    val_dataset = SolarPanelTrainDataset(image_dir=val_image_dir, mask_dir=val_mask_dir, file_format=file_format, transforms=transform_images)
+    val_dataset = SolarPanelTrainDataset(image_dir=val_image_dir,
+                                         mask_dir=val_mask_dir,
+                                         file_format=file_format,
+                                         transforms=transform_images,
+                                         augmentation_cfg=settings['augmentation'])
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, drop_last=False)
 
     # Set criterion and optimizer
-    if model_sel == "Segformer":
+    if model_sel == "segformer":
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.AdamW(model.parameters(), lr=lr)
     else:
@@ -562,7 +475,7 @@ def train_model(device, model_sel, model, lr, early_stop, train_image_dir, train
             masks = masks.to(device)
             optimizer.zero_grad()
 
-            if model_sel == "Segformer":
+            if model_sel == "segformer":
                   outputs = model(pixel_values=images).logits
                   outputs = F.interpolate(outputs, size=(image_size, image_size), mode='bilinear', align_corners=False) # Upsample the outputs to match the mask size
                   outputs = outputs.permute(0, 2, 3, 1).reshape(-1, outputs.size(1)) # ¡Ensure the outputs and masks have the correct shape (N, C, H, W) -> (N*H*W, C)
@@ -574,7 +487,7 @@ def train_model(device, model_sel, model, lr, early_stop, train_image_dir, train
                   running_loss += loss.item()
                   accuracy = accuracy_score(masks.cpu().numpy(), predicted.cpu().numpy())
                   running_accuracy += accuracy
-            elif model_sel == "UNet":
+            elif model_sel == "unet":
                   outputs = model(images)
                   outputs = F.interpolate(outputs, size=(image_size, image_size), mode='bilinear', align_corners=False)
                   outputs = outputs.squeeze(1)
@@ -620,7 +533,7 @@ def train_model(device, model_sel, model, lr, early_stop, train_image_dir, train
                     images = images.to(device)
                     masks = masks.to(device)
 
-                    if model_sel == "Segformer":
+                    if model_sel == "segformer":
                           outputs = model(pixel_values=images).logits
                           outputs = F.interpolate(outputs, size=(image_size, image_size), mode='bilinear', align_corners=False) # Upsample the outputs to match the mask size
                           outputs = outputs.permute(0, 2, 3, 1).reshape(-1, outputs.size(1)) # ¡Ensure the outputs and masks have the correct shape (N, C, H, W) -> (N*H*W, C)
@@ -633,7 +546,7 @@ def train_model(device, model_sel, model, lr, early_stop, train_image_dir, train
                           val_accuracy += accuracy
                           dice_score = f1_score(masks.cpu().numpy(), predicted.cpu().numpy(), average='binary', zero_division=0)
                           jaccard_index = jaccard_score(masks.cpu().numpy(), predicted.cpu().numpy(), average='binary', zero_division=0)
-                    elif model_sel == "UNet":
+                    elif model_sel == "unet":
                           outputs = model(images)
                           outputs = F.interpolate(outputs, size=(image_size, image_size), mode='bilinear', align_corners=False)
                           outputs = outputs.squeeze(1)
@@ -699,8 +612,8 @@ def train_model(device, model_sel, model, lr, early_stop, train_image_dir, train
                     print(f"Scheduler step: Learning rate is now {current_lr:.8f}")
 
     # Save and show the final plots at the end of training
-    plot_charts(train_losses, train_accuracies, val_losses, val_accuracies, ious, f1s, val_interval)
-    save_plots(train_losses, train_accuracies, val_losses, val_accuracies, ious, f1s, val_interval, epoch=None, output_dir=output_dir)
+    plot.plot_charts(train_losses, train_accuracies, val_losses, val_accuracies, ious, f1s, val_interval)
+    plot.save_plots(train_losses, train_accuracies, val_losses, val_accuracies, ious, f1s, val_interval, epoch=None, output_dir=output_dir)
     print(f"Saved final plots")
 
     return {'train_losses':train_losses, 'train_accuracies':train_accuracies,
@@ -757,10 +670,7 @@ def main() -> int:
 
     ########################
     
-    """# Execution
-
-    **Download dataset**
-    """
+    """# Execution """
 
     # Download and extract the dataset
     start_time = time.perf_counter()
@@ -785,17 +695,21 @@ def main() -> int:
                 "and/or you do not have an MPS-enabled device on this machine.")
 
     # Load selected model
-    if model_sel == "Segformer":
+    if settings['model'].lower() == "segformer":
         print("Loading Segformer...")
+        # Segformer model parameters
+        id2label = {0: 'background', 1: 'solar_panel'}           # dictionary of solar panel labels
+        label2id = {label: id for id, label in id2label.items()} # dictionary of ids associated to labels
+
         # Load the pretrained Segformer model
         model = SegformerForSemanticSegmentation.from_pretrained(
             seg_pretrained_model_name,
-            num_labels=num_labels,
+            num_labels=len(id2label),
             id2label=id2label,
             label2id=label2id,
             ignore_mismatched_sizes=True,
         )
-    elif model_sel == "UNet":
+    elif settings['model'].lower() == "unet":
         print("Loading UNet...")
         # Load the pretrained UNet model
         model = unet.UNet(in_channels=3, out_channels=1)
@@ -820,7 +734,18 @@ def main() -> int:
     # Run training and validation
     start_time = time.perf_counter()
     print(f"Running test")
-    model_train_log = train_model(device, model_sel, model, lr, early_stop, train_image_dir, train_mask_dir, val_image_dir, val_mask_dir, output_dir, results_path, dataset_name, num_epochs, val_interval, num_samples, image_size, early_stop_patience)
+    model_train_log = train_model(device,
+                                  settings,
+                                  model, 
+                                  early_stop,
+                                  train_image_dir, train_mask_dir,
+                                  val_image_dir, val_mask_dir,
+                                  output_dir, results_path,
+                                  dataset_name, 
+                                  val_interval, 
+                                  num_samples, 
+                                  image_size,
+                                  early_stop_patience)
     save_model(model, output_dir, model_name)
     elapsed_time = time.perf_counter() - start_time
     print(f"Training and validation took: {time_fmt.format_time(elapsed_time)}\n")

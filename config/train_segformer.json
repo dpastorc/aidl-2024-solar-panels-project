@@ -1,0 +1,20 @@
+{
+    "model": "Segformer",
+    "batch_size": 64,
+    "epochs": 50,
+    "lr": 0.0001,
+    "augmentation": {
+        "flip": true,
+        "rotation": true,
+        "brightness": true,
+        "contrast": true,
+        "saturation": true,
+        "hue": true,
+        "blur": true,
+        "sharpen": true,
+        "gaussian_noise": true,
+        "random_padding": true,
+        "random_polygons": true,
+        "contain_solar_panel": true
+    }
+}
