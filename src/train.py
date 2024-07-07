@@ -662,7 +662,8 @@ def main() -> int:
     val_mask_dir = os.path.join(dataset_path, 'val/masks')                                       # Validation dataset path - masks
 
     # Training parameters
-    output_dir = os.path.join(root_dir, 'results/')                                              # Path to the output results directory
+    experiment_name_folder = os.path.splitext(os.path.basename(json_cfg_file))[0].replace(" ", "_")
+    output_dir = os.path.join(root_dir, 'results', experiment_name_folder)                                              # Path to the output results directory
     results_path = os.path.join(output_dir, 'test_results.txt')                                  # Path to the results file
 
     # Model parameters
