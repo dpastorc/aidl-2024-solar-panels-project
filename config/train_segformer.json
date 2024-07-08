@@ -16,5 +16,7 @@
         "random_padding": true,
         "random_polygons": true,
         "contain_solar_panel": true
-    }
+    },
+    "validation_interval": 5,
+    "num_samples": 10
 }

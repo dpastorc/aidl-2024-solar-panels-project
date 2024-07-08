@@ -32,11 +32,10 @@ from packages import time_fmt, plot, zip
 from models import unet
 
 # Quick configuration and Hyperparameters
-dataset_name = 'ZENODO-split'                                                   # Datasets available: PV01-split, PV-ALL-split, PV03-CROP-split, ZENODO-split
+dataset_name = 'GOOGLE-split'                                                   # Datasets available: PV01-split, PV-ALL-split, PV03-CROP-split, GOOGLE-split (aka ZENODO-split)
 seg_pretrained_model_name = "nvidia/segformer-b0-finetuned-ade-512-512"         # Pretrained Segformer model range from b0 to b5. Ignore for UNet selection
 dict_sel = None                                                                 # Dictionary of the selected fine-tuned model from previous iterations; Use None to train from scratch.
 image_size = 256                                                                # Image size for training
-val_interval = 5                                                                # Epochs interval to execute validation cycles
 
 # Learning Rate Hyperparameter Optimization
 early_stop = False                                                              # Early stopping: True or False
@@ -52,17 +51,9 @@ google_file_format = 'png'                                                      
 dataset_url = 'https://temp-posgraduation.s3.amazonaws.com/' + dataset_name + '.zip' # Location of the preprocessed and split dataset
 root_dir = '/content/'                                                          # Root directory
 
-# Training parameters
-num_samples = 10                                                                # Number of train and validation samples to save
-
 # Model parameters
 dict_location = 'https://temp-posgraduation.s3.amazonaws.com/'                  # Base public URL where pretrained model dictionaries have been placed for download
 model_name = 'solar_panel_detector_train.pth'                                   # Name of the trained model dictionary to save
-
-# Zip parameters
-zip_filename = 'Solar_Panel_Detector_Train.zip'                                  # Name of the zip file to save the experiment outputs
-exclude_folders = ['sample_data', 'dataset', 'model', '.config', zip_filename]  # Paths to exclude in zip file
-
 
 """# Supporting Functions"""
 
@@ -387,24 +378,24 @@ class SolarPanelTrainDataset(Dataset):
 
 """**Train function**"""
 
-def train_model(device, 
-                settings, 
-                model, 
-                early_stop, 
-                train_image_dir, train_mask_dir, 
-                val_image_dir, val_mask_dir, 
+def train_model(device,
+                settings,
+                model,
+                early_stop,
+                train_image_dir, train_mask_dir,
+                val_image_dir, val_mask_dir,
                 output_dir,
-                results_path, 
-                dataset_name,  
-                val_interval, 
-                num_samples, 
-                image_size, 
+                results_path,
+                dataset_name,
+                image_size,
                 early_stop_patience):
 
     model_sel = settings['model'].lower()
     batch_size = settings['batch_size']
     num_epochs = settings['epochs']
     lr = settings['lr']
+    val_interval = settings['validation_interval']
+    num_samples = settings['num_samples']
 
     # Transformations for the dataset
     transform_images = transforms.Compose([
@@ -507,7 +498,13 @@ def train_model(device,
 
         # Save training samples if the current epoch is in the save_epochs list
         if epoch in save_epochs:
-            save_samples(images, masks.reshape(images.shape[0], image_size, image_size), predicted.reshape(images.shape[0], image_size, image_size), epoch, sample_type="train", output_dir=output_dir, num_samples=num_samples)
+            save_samples(images,
+                         masks.reshape(images.shape[0], image_size, image_size),
+                         predicted.reshape(images.shape[0], image_size, image_size),
+                         epoch,
+                         sample_type="train",
+                         output_dir=output_dir,
+                         num_samples=num_samples)
             print(f"Epoch {epoch+1}/{num_epochs}, Saved training samples")
 
         # Append metrics
@@ -572,7 +569,11 @@ def train_model(device,
 
             # Save validation samples if the current epoch is in the save_epochs list
             if epoch in save_epochs:
-                save_samples(images, masks.reshape(images.shape[0], image_size, image_size), predicted.reshape(images.shape[0], image_size, image_size), epoch, sample_type="val", output_dir=output_dir, num_samples=num_samples)
+                save_samples(images, masks.reshape(images.shape[0], image_size, image_size),
+                             predicted.reshape(images.shape[0], image_size, image_size),
+                             epoch, sample_type="val",
+                             output_dir=output_dir,
+                             num_samples=num_samples)
                 print(f"Epoch {epoch+1}/{num_epochs}, Saved validation samples")
 
             # Append metrics
@@ -641,7 +642,8 @@ def main() -> int:
     ap.add_argument("-c", "--config", required=True, help="Configuration json file (generalization parameters)")
     ap.add_argument("--no-dataset-download", required=False, action='store_true', default=False, help="Skip dataset download")
     ap.add_argument("--no-pretrain-download", required=False, action='store_true', default=False, help="Skip pretrain model download")
-    args = vars(ap.parse_args())
+    args, unknown = ap.parse_known_args()
+    args = vars(args)
 
     json_cfg_file = args['config']
     try:
@@ -653,13 +655,14 @@ def main() -> int:
     print(f"Settings:\n{settings}")
 
     root_dir = args['root_dir']
+    dict_sel = settings.get('pre_trained')
 
     # Dataset parameters
-    dataset_path = os.path.join(root_dir, 'dataset/')                                            # Path to the dataset
-    train_image_dir = os.path.join(dataset_path, 'train/images')                                 # Train dataset path - images
-    train_mask_dir = os.path.join(dataset_path, 'train/masks')                                   # Train dataset path - masks
-    val_image_dir = os.path.join(dataset_path, 'val/images')                                     # Validation dataset path - images
-    val_mask_dir = os.path.join(dataset_path, 'val/masks')                                       # Validation dataset path - masks
+    dataset_path = os.path.join(root_dir, 'dataset/')                          # Path to the dataset
+    train_image_dir = os.path.join(dataset_path, dataset_name, 'train/images') # Train dataset path - images
+    train_mask_dir = os.path.join(dataset_path, dataset_name, 'train/masks')   # Train dataset path - masks
+    val_image_dir = os.path.join(dataset_path, dataset_name, 'val/images')     # Validation dataset path - images
+    val_mask_dir = os.path.join(dataset_path, dataset_name, 'val/masks')       # Validation dataset path - masks
 
     # Training parameters
     experiment_name_folder = os.path.splitext(os.path.basename(json_cfg_file))[0].replace(" ", "_")
@@ -668,6 +671,7 @@ def main() -> int:
 
     # Model parameters
     model_dir = os.path.join(root_dir, 'model/')                                                 # Path to the pretrained model dictionary folder
+    pretrained_model_dir = os.path.join(root_dir, 'pretrained/')                                 # Path to the pretrained model dictionary folder
 
     ########################
     
@@ -675,7 +679,7 @@ def main() -> int:
 
     # Download and extract the dataset
     start_time = time.perf_counter()
-    if args['no_pretrain_download'] == False:
+    if args['no_dataset_download'] == False:
         download_and_extract(dataset_url, dataset_path)
     train_images_count = len(os.listdir(train_image_dir))                           # Count the number of images under train folder
     val_images_count = len(os.listdir(val_image_dir))                               # Count the number of images under validation folder
@@ -719,8 +723,9 @@ def main() -> int:
 
     # Download and load the state dictionary from a pretrained model
     if dict_sel is not None:
-        download_dict(dict_location, model_dir, dict_sel)
-        pretrained_model_path = os.path.join(model_dir, dict_sel)
+        if args['no_pretrain_download'] == False:
+            download_dict(dict_location, pretrained_model_dir, dict_sel)
+        pretrained_model_path = os.path.join(pretrained_model_dir, dict_sel)
         try:
             model.load_state_dict(torch.load(pretrained_model_path, map_location=device))
             print(f"Successfully loaded the model from {pretrained_model_path}")
@@ -742,9 +747,7 @@ def main() -> int:
                                   train_image_dir, train_mask_dir,
                                   val_image_dir, val_mask_dir,
                                   output_dir, results_path,
-                                  dataset_name, 
-                                  val_interval, 
-                                  num_samples, 
+                                  dataset_name,
                                   image_size,
                                   early_stop_patience)
     save_model(model, output_dir, model_name)
@@ -754,9 +757,11 @@ def main() -> int:
     """**Zip results**"""
 
     # Create the zip file
-    #zip.zip_dir(root_dir, zip_filename, exclude_folders)
-    #zip_file_path = os.path.join(root_dir, zip_filename)
-    #zip.list_folders_and_files_in_zip(zip_file_path)
+    zip_filename = 'Solar_Panel_Detector_Train_' + experiment_name_folder + '.zip'   # Name of the zip file to save the experiment outputs
+    exclude_folders = ['sample_data', 'dataset', '.config', zip_filename]  # Paths to exclude in zip file
+    zip.zip_dir(root_dir, zip_filename, exclude_folders)
+    zip_file_path = os.path.join(root_dir, zip_filename)
+    zip.list_folders_and_files_in_zip(zip_file_path)
 
 if __name__ == '__main__':
     sys.exit(main())  # next section explains the use of sys.exit
