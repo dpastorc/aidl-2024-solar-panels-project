@@ -13,6 +13,14 @@
             "args": "-r ${workspaceFolder}/dataset/raw/ --skip-pv01-extract --sskip-pv03-extract --skip-google-extract"
         },
         {
+            "name": "Python Debugger: train segformer e14 (no download)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/train.py",
+            "console": "integratedTerminal",
+            "args": "-r ${workspaceFolder} -c ${workspaceFolder}/config/train_segformer_e14.json --no-dataset-download --no-pretrain-download"
+        },
+        {
             "name": "Python Debugger: train segformer (no download)",
             "type": "debugpy",
             "request": "launch",
@@ -21,12 +29,60 @@
             "args": "-r ${workspaceFolder} -c ${workspaceFolder}/config/train_segformer.json --no-dataset-download --no-pretrain-download"
         },
         {
+            "name": "Python Debugger: train unet (no download)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/train.py",
+            "console": "integratedTerminal",
+            "args": "-r ${workspaceFolder} -c ${workspaceFolder}/config/train_unet.json --no-dataset-download --no-pretrain-download"
+        },
+        {
             "name": "Python Debugger: train segformer",
             "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/src/train.py",
             "console": "integratedTerminal",
             "args": "-r ${workspaceFolder} -c ${workspaceFolder}/config/train_segformer.json --no-pretrain-download"
+        },
+        {
+            "name": "Python Debugger: test segformer (download all)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/test.py",
+            "console": "integratedTerminal",
+            "args": "-r ${workspaceFolder} -c ${workspaceFolder}/config/test_segformer.json"
+        },
+        {
+            "name": "Python Debugger: test segformer (no download dataset)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/test.py",
+            "console": "integratedTerminal",
+            "args": "-r ${workspaceFolder} -c ${workspaceFolder}/config/test_segformer.json --no-dataset-download --zzno-pretrain-download"
+        },
+        {
+            "name": "Python Debugger: test segformer (no download dataset nor model)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/test.py",
+            "console": "integratedTerminal",
+            "args": "-r ${workspaceFolder} -c ${workspaceFolder}/config/test_segformer.json --no-dataset-download --no-pretrain-download"
+        },
+        {
+            "name": "Python Debugger: test segformer E14 (no download dataset nor model)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/test.py",
+            "console": "integratedTerminal",
+            "args": "-r ${workspaceFolder} -c ${workspaceFolder}/config/test_segformer_E14.json --no-dataset-download --no-pretrain-download"
+        },
+        {
+            "name": "Python Debugger: test unet (no download dataset nor model)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/test.py",
+            "console": "integratedTerminal",
+            "args": "-r ${workspaceFolder} -c ${workspaceFolder}/config/test_unet.json --no-dataset-download --no-pretrain-download"
         },
         {
             "name": "Python Debugger: gen segformer sant cugat (no download)",
