@@ -1,0 +1,5 @@
+{
+    "model": "UNet",
+    "pre_trained": "unet_solar_panel_detector.pth",
+    "batch_size": 8
+}

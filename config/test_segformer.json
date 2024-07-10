@@ -1,0 +1,5 @@
+{
+    "model": "Segformer",
+    "pre_trained": "segformer_solar_panel_detector.pth",
+    "batch_size": 8
+}

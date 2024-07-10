@@ -160,11 +160,9 @@ cython_debug/
 #.idea/
 
 # aidl project specific files
-raw/
 dataset/*
 dataset_*/
-datasets_*/
-images*/
 gen/
 results/
 porting/
+trash/
