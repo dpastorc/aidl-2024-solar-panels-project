@@ -5,7 +5,7 @@ import json
 
 """# Libraries"""
 
-# Import libraries - TBD
+# Import libraries
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -19,9 +19,8 @@ import torchvision.transforms.functional as TF
 import zipfile
 import requests
 
-from PIL import Image, ImageEnhance, ImageFilter, ImageDraw
+from PIL import Image
 from sklearn.metrics import accuracy_score, jaccard_score, f1_score
-from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 from transformers import SegformerForSemanticSegmentation
@@ -32,8 +31,6 @@ from models import unet
 
 # Quick configuration
 dataset_name = 'GOOGLE-split'                                                   # Datasets available: PV01-split, PV-ALL-split, PV03-CROP-split, GOOGLE-split
-#model_sel = 'Segformer'                                                         # Segformer or UNet
-#dict_sel = 'segformer_solar_panel_detector.pth'                                 # Dictionary of the selected fine-tuned model for solar panel detection
 
 """# Parameters"""
 
@@ -46,14 +43,9 @@ dataset_url = 'https://temp-posgraduation.s3.amazonaws.com/' + dataset_name + '.
 root_dir = '/content/'                                                          # Root directory
 
 # Inference parameters
-#batch_size = 8                                                                  # 8 on T4 GPU, 64 on A100 GPU
 image_size = 256                                                                # Image size for inference
-#output_dir = os.path.join(root_dir, 'results/')                                 # Path to the output directory
-#results_path = output_dir + 'test_results.txt'                                  # Path to the results file
 
 # Model parameters
-#model_dir = os.path.join(root_dir, 'model/')                                    # Path to the pretrained model dictionary folder
-#pretrained_model_path = model_dir + dict_sel                                    # Path to the pretrained model dictionary
 dict_location = 'https://temp-posgraduation.s3.amazonaws.com/'                  # Base public URL where pretrained model dictionaries have been placed for download
 
 # Segformer model parameters
@@ -70,7 +62,6 @@ paths_to_remove = "/content/results /content/dataset"   # "/content/samples /con
 """**Functions to generate and save images**"""
 
 # Function to create an overlay of image and mask
-
 def overlay_image(image, mask, color, alpha, resize=None):
     im_copy = (image * 255).astype(np.uint8)
     im_copy = Image.fromarray(im_copy, "RGB")
@@ -86,7 +77,6 @@ def overlay_image(image, mask, color, alpha, resize=None):
     return np.array(im_copy)
 
 # Function to save samples
-
 def save_samples(images, masks, predictions, sample_type, output_dir="results", num_samples=8):
     os.makedirs(output_dir, exist_ok=True)
 
@@ -147,7 +137,6 @@ def save_samples(images, masks, predictions, sample_type, output_dir="results", 
 """# Dataset download function"""
 
 # Function to download and extract the dataset
-
 def download_and_extract(url, dest_path):
     if not os.path.exists(dest_path):
         os.makedirs(dest_path)
@@ -367,8 +356,8 @@ def main() -> int:
 
     # Dataset parameters
     dataset_path = os.path.join(root_dir,  'dataset/') # Path to the dataset
-    test_image_dir = os.path.join(dataset_path, dataset_name, 'test/images') # Test dataset path - images
-    test_mask_dir = os.path.join(dataset_path, dataset_name, 'test/masks')   # Test dataset path - masks
+    test_image_dir = os.path.join(dataset_path, 'test/images') # Test dataset path - images
+    test_mask_dir = os.path.join(dataset_path, 'test/masks')   # Test dataset path - masks
 
     # test parameters
     experiment_name_folder = os.path.splitext(os.path.basename(json_cfg_file))[0].replace(" ", "_")
@@ -376,7 +365,6 @@ def main() -> int:
     results_path = os.path.join(output_dir, 'test_results.txt')                                  # Path to the results file
 
     # Model parameters
-    #model_dir = os.path.join(root_dir, 'model/')                                                 # Path to the pretrained model dictionary folder
     pretrained_model_dir = os.path.join(root_dir, 'pretrained/')                                 # Path to the pretrained model dictionary folder
 
     """# Execution"""
@@ -421,6 +409,7 @@ def main() -> int:
         model = unet.UNet(in_channels=3, out_channels=1)
     else:
         print("Error: Invalid model selection")
+        return 1
 
     # Download and load the state dictionary from a pretrained model
     if dict_sel is not None:
@@ -457,7 +446,7 @@ def main() -> int:
 
     # Create the zip file
     zip_filename = 'Solar_Panel_Detector_Test_' + experiment_name_folder + '.zip'   # Name of the zip file to save the experiment outputs
-    exclude_folders = ['sample_data', 'dataset', '.config', zip_filename]  # Paths to exclude in zip file
+    exclude_folders = ['sample_data', 'dataset', 'trash', '.config', zip_filename]  # Paths to exclude in zip file
     zip.zip_dir(root_dir, zip_filename, exclude_folders)
     zip_file_path = os.path.join(root_dir, zip_filename)
     zip.list_folders_and_files_in_zip(zip_file_path)
