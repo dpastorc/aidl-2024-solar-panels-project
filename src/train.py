@@ -659,10 +659,10 @@ def main() -> int:
 
     # Dataset parameters
     dataset_path = os.path.join(root_dir, 'dataset/')                          # Path to the dataset
-    train_image_dir = os.path.join(dataset_path, dataset_name, 'train/images') # Train dataset path - images
-    train_mask_dir = os.path.join(dataset_path, dataset_name, 'train/masks')   # Train dataset path - masks
-    val_image_dir = os.path.join(dataset_path, dataset_name, 'val/images')     # Validation dataset path - images
-    val_mask_dir = os.path.join(dataset_path, dataset_name, 'val/masks')       # Validation dataset path - masks
+    train_image_dir = os.path.join(dataset_path, 'train/images') # Train dataset path - images
+    train_mask_dir = os.path.join(dataset_path, 'train/masks')   # Train dataset path - masks
+    val_image_dir = os.path.join(dataset_path, 'val/images')     # Validation dataset path - images
+    val_mask_dir = os.path.join(dataset_path, 'val/masks')       # Validation dataset path - masks
 
     # Training parameters
     experiment_name_folder = os.path.splitext(os.path.basename(json_cfg_file))[0].replace(" ", "_")
