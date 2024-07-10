@@ -11,9 +11,6 @@ import time
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-#import torch.optim as optim
-#import torchvision.transforms.functional as TF
-import zipfile
 import requests
 import imageio
 import math
@@ -29,7 +26,7 @@ from tqdm import tqdm
 from matplotlib.ticker import MaxNLocator
 from IPython.display import display, Image as IPImage
 
-from packages import time_fmt
+from packages import time_fmt, ziptools
 from models import unet
 
 """# Parameters"""
@@ -61,10 +58,6 @@ avg_W = 210                                                                     
 transition_time = 1000                                                          # Transition time in mseconds for the animated GIF
 target_size = (1024, 768)                                                       # Animated GIF dimensions
 crop_params = None                                                              # Crop area for the target animated gif in percentages (xmin, ymin, xmax, ymax), i.e. (0.3, 0.55, 0.5, 0.7)
-
-# Zip parameters
-zip_filename = 'Solar_Panel_Generalization.zip'                                 # Name of the zip file to save the experiment outputs
-exclude_folders = ['sample_data', 'raw', 'dataset', 'gen/predimgs', '.config', zip_filename]  # Paths to exclude in zip file
 
 """# Supporting Functions"""
 
@@ -951,9 +944,12 @@ def main() -> int:
     """**Zip results**"""
     
     # Create the zip file
-    #zip_dir(root_dir, zip_filename, exclude_folders)
-    #zip_file_path = os.path.join(root_dir, zip_filename)
-    #list_folders_and_files_in_zip(zip_file_path)
+    experiment_name_folder = os.path.splitext(os.path.basename(json_cfg_file))[0].replace(" ", "_")
+    zip_filename = 'Solar_Panel_Generalization_' + experiment_name_folder + '.zip'   # Name of the zip file to save the experiment outputs
+    exclude_folders = ['sample_data', 'raw', 'dataset', 'gen/predimgs', 'trash', '.config', zip_filename]  # Paths to exclude in zip file
+    ziptools.zip_dir(root_dir, zip_filename, exclude_folders)
+    zip_file_path = os.path.join(root_dir, zip_filename)
+    ziptools.list_folders_and_files_in_zip(zip_file_path)
 
     return 0
 
