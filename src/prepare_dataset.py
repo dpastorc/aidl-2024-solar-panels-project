@@ -6,7 +6,7 @@ import argparse
 import zipfile
 import random
 
-from ..src.packages import crop, files, zip
+from packages import crop, files, ziptools
 
 # Function to split the dataset
 def split_dataset(images_path, masks_path, train_ratio, val_ratio, test_ratio):
@@ -75,7 +75,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
 
     # Add the arguments to the parser
-    ap.add_argument("-r", "--root_dir", required=True, default=".../dataset/", help="Root path of the project (required to download dataset and preprocess to required layout)")
+    ap.add_argument("-r", "--root_dir", required=True, default="./dataset/", help="Root path of the project (required to download dataset and preprocess to required layout)")
     ap.add_argument("--skip-pv01-extract", required=False, action='store_true', default=False, help="Skip PV1 dataset zip extract")
     ap.add_argument("--skip-pv03-extract", required=False, action='store_true', default=False, help="Skip PV3 dataset zip extract")
     ap.add_argument("--skip-google-extract", required=False, action='store_true', default=False, help="Skip PV Google dataset zip extract")
@@ -83,9 +83,13 @@ def main() -> int:
     args = vars(args)
 
     #1º - Download of the files: PV01, PV03 and google
-    #PV01:https://zenodo.org/records/5171712
-    #PV03:https://www.kaggle.com/datasets/salimhammadi07/solar-panel-detection-and-identification?resource=download
-    #Google: https://zenodo.org/records/7358126
+    # PV01: https://zenodo.org/records/5171712
+    #   Bash command: wget https://zenodo.org/records/5171712/files/PV01.zip?download=1 -O dataset_prepare/PV01.zip
+    # PV03: https://www.kaggle.com/datasets/salimhammadi07/solar-panel-detection-and-identification?resource=download
+    #   You have to donwload from browser due you need some credentials to download from kaggle.
+    #   Please donload using the black button on top-right, other links will donwload a different zip file.
+    # Google: https://zenodo.org/records/7358126
+    #   Bash command: wget https://zenodo.org/records/7358126/files/bdappv.zip?download=1 -O dataset_prepare/GOOGLE.zip
 
     #2º - put the zip with the names: PV01.zip, PV03.zip and GOOGLE.zip in local_dir
 
@@ -228,25 +232,25 @@ def main() -> int:
     #
     print('Phase 3: Zipping the folders')
     
-    zip.zip_directories(os.path.join(local_dir, "result/PV01-split.zip"),
-                        os.path.join(local_dir, "PV01-split/train"),
-                        os.path.join(local_dir, "PV01-split/val"),
-                        os.path.join(local_dir, "PV01-split/test"))
+    ziptools.zip_directories(os.path.join(local_dir, "result/PV01-split.zip"),
+                             os.path.join(local_dir, "PV01-split/train"),
+                             os.path.join(local_dir, "PV01-split/val"),
+                             os.path.join(local_dir, "PV01-split/test"))
 
-    zip.zip_directories(os.path.join(local_dir, "result/PV03-CROP-split.zip"),
-                        os.path.join(local_dir, "PV03-CROP-split/train"),
-                        os.path.join(local_dir, "PV03-CROP-split/val"),
-                        os.path.join(local_dir, "PV03-CROP-split/test"))
+    ziptools.zip_directories(os.path.join(local_dir, "result/PV03-CROP-split.zip"),
+                             os.path.join(local_dir, "PV03-CROP-split/train"),
+                             os.path.join(local_dir, "PV03-CROP-split/val"),
+                             os.path.join(local_dir, "PV03-CROP-split/test"))
 
-    zip.zip_directories(os.path.join(local_dir, "result/PV-ALL-split.zip"),
-                        os.path.join(local_dir, "PV-ALL-split/train"),
-                        os.path.join(local_dir, "PV-ALL-split/val"),
-                        os.path.join(local_dir, "PV-ALL-split/test"))
+    ziptools.zip_directories(os.path.join(local_dir, "result/PV-ALL-split.zip"),
+                             os.path.join(local_dir, "PV-ALL-split/train"),
+                             os.path.join(local_dir, "PV-ALL-split/val"),
+                             os.path.join(local_dir, "PV-ALL-split/test"))
 
-    zip.zip_directories(os.path.join(local_dir, "result/GOOGLE-split.zip"),
-                        os.path.join(local_dir, "GOOGLE-split/train"),
-                        os.path.join(local_dir, "GOOGLE-split/val"),
-                        os.path.join(local_dir, "GOOGLE-split/test"))
+    ziptools.zip_directories(os.path.join(local_dir, "result/GOOGLE-split.zip"),
+                             os.path.join(local_dir, "GOOGLE-split/train"),
+                             os.path.join(local_dir, "GOOGLE-split/val"),
+                             os.path.join(local_dir, "GOOGLE-split/test"))
 
     return 0
 

@@ -8,9 +8,9 @@
             "name": "Python Debugger: dataset preprocess",
             "type": "debugpy",
             "request": "launch",
-            "program": "${workspaceFolder}/tools/prepare_dataset.py",
+            "program": "${workspaceFolder}/src/prepare_dataset.py",
             "console": "integratedTerminal",
-            "args": "-r ${workspaceFolder}/dataset/raw/ --skip-pv01-extract --sskip-pv03-extract --skip-google-extract"
+            "args": "-r ${workspaceFolder}/dataset_prepare/ --sskip-pv01-extract --sskip-pv03-extract --sskip-google-extract"
         },
         {
             "name": "Python Debugger: train segformer e14 (no download)",

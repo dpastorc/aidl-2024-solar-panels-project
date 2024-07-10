@@ -37,7 +37,7 @@ def crop(input_folder : str, output_folder : str, num_tiles : int, verbose = Fal
                     crop_bottom = crop_top + int(h / num_cols)
                     crop_region = (crop_left, crop_top, crop_right, crop_bottom)
                     imCrop = im.crop(crop_region)
-                    output_filename = os.path.join(output_folder, __generate_output_filename(input_file, tile_number, crop_region))
+                    output_filename = os.path.join(output_folder, __generate_output_filename(input_file, tile_number))
                     if (verbose):
                         print(f"Filename: {output_filename} -> {crop_region}")
                     imCrop.save(output_filename, 'JPEG', quality=90)

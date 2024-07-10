@@ -28,7 +28,7 @@ from transformers import SegformerForSemanticSegmentation
 from tqdm import tqdm
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-from packages import time_fmt, plot, zip
+from packages import time_fmt, plot, ziptools
 from models import unet
 
 # Quick configuration and Hyperparameters
@@ -759,9 +759,9 @@ def main() -> int:
     # Create the zip file
     zip_filename = 'Solar_Panel_Detector_Train_' + experiment_name_folder + '.zip'   # Name of the zip file to save the experiment outputs
     exclude_folders = ['sample_data', 'dataset', '.config', zip_filename]  # Paths to exclude in zip file
-    zip.zip_dir(root_dir, zip_filename, exclude_folders)
+    ziptools.zip_dir(root_dir, zip_filename, exclude_folders)
     zip_file_path = os.path.join(root_dir, zip_filename)
-    zip.list_folders_and_files_in_zip(zip_file_path)
+    ziptools.list_folders_and_files_in_zip(zip_file_path)
 
 if __name__ == '__main__':
     sys.exit(main())  # next section explains the use of sys.exit
