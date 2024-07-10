@@ -44,10 +44,9 @@ The purpose of this notebook is to run generalization using an AI model trained 
 """
 
 # Quick configuration
-#bounding_box = [448650, 4594800, 449500, 4595500]                               # [xmin, ymin, xmax, ymax] - Coordinate reference system: ETRS89 UTM fus 31 Nord (EPSG:25831) measured in meters
-bounding_box = [421090, 4590838, 421450, 4591173]                               # [xmin, ymin, xmax, ymax] - Coordinate reference system: ETRS89 UTM fus 31 Nord (EPSG:25831) measured in meters
-years = [2021, 2022, 2023]                                                      # allowed values: 1993, 2000-2003, 2004-2005, 2006-2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023
-region = "Urban area in Vilassar de Mar"                                        # Label for the selected bounding box to be displayed in animated gif
+bounding_box = [421274, 4590840, 421512,  4591000]                               # [xmin, ymin, xmax, ymax] - Coordinate reference system: ETRS89 UTM fus 31 Nord (EPSG:25831) measured in meters
+years = [2019, 2020, 2021, 2022, 2023]                                                      # allowed values: 1993, 2000-2003, 2004-2005, 2006-2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023
+region = "Urban area in Sant Cugat"                                        # Label for the selected bounding box to be displayed in animated gif
 model_sel = 'UNet'                                                              # Segformer or UNet
 
 """# Parameters"""
@@ -103,7 +102,7 @@ gif_paths_to_include = [gif_masks, gif_overlays]                                
 
 # Zip parameters
 zip_filename = 'Solar_Panel_Generalization.zip'                                 # Name of the zip file to save the experiment outputs
-exclude_folders = ['sample_data', 'raw', 'dataset', 'gen/predimgs', '.config', zip_filename]  # Paths to exclude in zip file
+exclude_folders = ['sample_data', 'raw', 'dataset', 'gen/predimgs', 'model', '.config', zip_filename]  # Paths to exclude in zip file
 
 """# Libraries"""
 
@@ -154,8 +153,8 @@ def format_time(elapsed_time) -> str:
 """**Functions to manage files and folders**"""
 
 # Delete desired folders
-paths_to_remove = "/content/raw/ /content/dataset/"
-# !rm -rf {paths_to_remove}
+paths_to_remove = "/content/gen/ /content/model/"
+#!rm -rf {paths_to_remove}
 
 # Function to list all files by subfolder (year)
 
@@ -726,7 +725,8 @@ def calculate_area_and_power(mask_image_dir_base, year, merged_filename, merged_
     spatial_resolution = physical_size / image_size
 
     # Calculate the PV area
-    PV_Area = spatial_resolution * pixels_PV.item()
+    pixel_area = (spatial_resolution ** 2)
+    PV_Area = pixel_area * pixels_PV.item()
     print("PV Area: ", PV_Area, "Square meters")
 
     # Calculate the installed power

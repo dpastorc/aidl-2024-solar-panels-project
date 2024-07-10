@@ -607,7 +607,8 @@ def calculate_area_and_power(mask_image_dir_base, year, merged_filename, merged_
     spatial_resolution = physical_size / image_size
 
     # Calculate the PV area
-    PV_Area = spatial_resolution * pixels_PV.item()
+    pixel_area = (spatial_resolution ** 2)
+    PV_Area = pixel_area * pixels_PV.item()
     print("PV Area: ", PV_Area, "Square meters")
 
     # Calculate the installed power
