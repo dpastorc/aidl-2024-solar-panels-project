@@ -42,7 +42,7 @@ The purpose of this notebook is to train an AI model on a given pre-processed da
 """
 
 # Quick configuration and Hyperparameters
-dataset_name = 'ZENODO-split'                                                   # Datasets available: PV01-split, PV-ALL-split, PV03-CROP-split, ZENODO-split
+dataset_name = 'GOOGLE-split'                                                   # Datasets available: PV01-split, PV-ALL-split, PV03-CROP-split, GOOGLE-split
 model_sel = 'Segformer'                                                         # Segformer or UNet
 seg_pretrained_model_name = "nvidia/segformer-b0-finetuned-ade-512-512"         # Pretrained Segformer model range from b0 to b5. Ignore for UNet selection
 dict_sel = None                                                                 # Dictionary of the selected fine-tuned model from previous iterations; Use None to train from scratch.

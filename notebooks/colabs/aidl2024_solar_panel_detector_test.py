@@ -31,9 +31,9 @@ The purpose of this notebook is to run test (inference) using an AI model traine
 """
 
 # Quick configuration
-dataset_name = 'ZENODO-split'                                                   # Datasets available: PV01-split, PV-ALL-split, PV03-CROP-split, ZENODO-split
+dataset_name = 'GOOGLE-split'                                                   # Datasets available: PV01-split, PV-ALL-split, PV03-CROP-split, GOOGLE-split
 model_sel = 'Segformer'                                                         # Segformer or UNet
-dict_sel = 'segformer_solar_panel_detector.pth'                                 # Dictionary of the selected fine-tuned model for solar panel detection
+dict_sel = 'segformer_solar_panel_detector.pth'                                 # Dictionary of the selected fine-tuned model for solar panel detection (segformer_solar_panel_detector.pth or unet_solar_panel_detector.pth)
 
 """# Parameters"""
 
@@ -111,8 +111,8 @@ def format_time(elapsed_time) -> str:
 """**Functions to manage files and folders**"""
 
 # Delete desired folders
-paths_to_remove = "/content/results /content/dataset"   # "/content/samples /content/plots /content/sample_data /content/model"
-# !rm -rf {paths_to_remove}
+paths_to_remove = "/content/results /content/model"   # "/content/samples /content/plots /content/sample_data /content/model"
+#!rm -rf {paths_to_remove}
 
 # Function to zip folders considering exclusion list
 

@@ -47,7 +47,7 @@ The purpose of this notebook is to run generalization using an AI model trained 
 bounding_box = [421274, 4590840, 421512,  4591000]                               # [xmin, ymin, xmax, ymax] - Coordinate reference system: ETRS89 UTM fus 31 Nord (EPSG:25831) measured in meters
 years = [2019, 2020, 2021, 2022, 2023]                                                      # allowed values: 1993, 2000-2003, 2004-2005, 2006-2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023
 region = "Urban area in Sant Cugat"                                        # Label for the selected bounding box to be displayed in animated gif
-model_sel = 'UNet'                                                              # Segformer or UNet
+model_sel = 'Segformer'                                                              # Segformer or UNet
 
 """# Parameters"""
 
